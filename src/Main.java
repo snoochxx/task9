@@ -1,15 +1,59 @@
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-public class Main {
-    public static void main(String[] args) {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        System.out.printf("Hello and welcome!");
+import java.util.Random;
 
-        for (int i = 1; i <= 5; i++) {
-            //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-            // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-            System.out.println("i = " + i);
+public class Main {
+    public static void main(String[] args) throws InterruptedException {
+        Account account = new Account();
+        DepositThread depositThread = new DepositThread(account);
+        depositThread.start();
+
+        account.withdraw(5000);
+
+        depositThread.interrupt();
+        depositThread.join();
+
+        System.out.println("Окончательный баланс: " + account.getBalance());
+    }
+}
+
+class Account {
+    private int balance = 0;
+
+    public synchronized void deposit(int amount) {
+        balance += amount;
+        System.out.println("Пополнено: " + amount + ", новый баланс: " + balance);
+        notifyAll();
+    }
+
+    public synchronized void withdraw(int amount) throws InterruptedException {
+        while (balance < amount) {
+            System.out.println("Ждем пополнения баланса для снятия " + amount);
+            wait();
+        }
+        balance -= amount;
+        System.out.println("Снято: " + amount + ", остаток: " + balance);
+    }
+
+    public synchronized int getBalance() {
+        return balance;
+    }
+}
+
+class DepositThread extends Thread {
+    private final Account account;
+    private final Random random = new Random();
+
+    DepositThread(Account account) {
+        this.account = account;
+    }
+
+    public void run() {
+        try {
+            while (!Thread.currentThread().isInterrupted()) {
+                int amount = random.nextInt(1000) + 1;
+                account.deposit(amount);
+                Thread.sleep(200);
+            }
+        } catch (InterruptedException ignored) {
         }
     }
 }
